@@ -9,6 +9,7 @@ package wasm3
 #include "m3_api_libc.h"
 #include "m3_api_wasi.h"
 #include "m3_env.h"
+#include "m3_function.h"
 #include "go-wasm3.h"
 
 // module_get_function is a helper function for the module Go struct
@@ -25,16 +26,16 @@ int call(IM3Function i_function, uint32_t i_argc, int i_argv[]) {
 	IM3FuncType ftype = i_function->funcType;
 	for (int i = 0; i < ftype->numArgs; i++) {
 		int v = i_argv[i];
-		u64* s = &stack[i];
+		u64* s = &stack[ftype->numRets + i];
 		*(u64*)(s) = v;
 	}
 	m3StackCheckInit();
-	M3Result call_result = Call(i_function->compiled, (m3stack_t)(stack), runtime->memory.mallocated, d_m3OpDefaultArgs);
+	M3Result call_result = (M3Result)RunCode(i_function->compiled, (m3stack_t)(stack), runtime->memory.mallocated, d_m3OpDefaultArgs);
 	if(call_result != NULL) {
 		set_error(call_result);
 		return -1;
 	}
-	switch (ftype->returnType) {
+	switch (ftype->types[0]) {
 		case c_m3Type_i32:
 			result = *(u32*)(stack);
 			break;
@@ -237,7 +238,7 @@ func(m *Module) GetFunction(index uint) (*Function, error) {
 		return nil, errFuncLookupFailed
 	}
 	ptr := C.module_get_function(m.Ptr(), C.int(index))
-	name := C.GoString(ptr.name)
+	name := C.GoString(ptr.names[0])
 	return &Function{
 		ptr: (FunctionT)(ptr),
 		Name: name,
@@ -250,7 +251,7 @@ func(m *Module) GetFunctionByName(lookupName string) (*Function, error) {
 	var fn *Function
 	for i :=0 ; i < m.NumFunctions(); i++ {
 		ptr := C.module_get_function(m.Ptr(), C.int(i))
-		name := C.GoString(ptr.name)
+		name := C.GoString(ptr.names[0])
 		if name != lookupName {
 			continue	
 		}
@@ -296,7 +297,7 @@ func(f *Function) Ptr() C.IM3Function {
 	return (C.IM3Function)(f.ptr)
 }
 
-// CallWithArgs wraps m3_CallWithArgs
+// CallWithArgs wraps m3_CallArgv
 func(f *Function) CallWithArgs(args... string) {
 	length := len(args)
 	cArgs := make([]*C.char, length)
@@ -304,7 +305,7 @@ func(f *Function) CallWithArgs(args... string) {
 		cVal := C.CString(v)
 		cArgs[i] = cVal
 	}
-	C.m3_CallWithArgs(f.Ptr(), C.uint(length), &cArgs[0])
+	C.m3_CallArgv(f.Ptr(), C.uint(length), &cArgs[0])
 }
 
 // Call implements a better call function
