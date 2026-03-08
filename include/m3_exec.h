@@ -669,7 +669,6 @@ d_m3Op  (CallRawFunction)
         printf("@ sparse\n");fflush(stdout);
         memArg = memory;
     } else {
-        printf("@ mem\n");fflush(stdout);
         memArg = m3MemData(_mem);
     }
 
