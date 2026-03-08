@@ -666,8 +666,10 @@ d_m3Op  (CallRawFunction)
 
     void* memArg = NULL;
     if (ctx.userdata != NULL && ((TaggedUserData*)ctx.userdata)->tag == TAG_USE_SPARSE_MEMORY) {
+        printf("@ sparse\n");fflush(stdout);
         memArg = memory;
     } else {
+        printf("@ mem\n");fflush(stdout);
         memArg = m3MemData(_mem);
     }
 
