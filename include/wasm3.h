@@ -213,9 +213,9 @@ d_m3ErrorConst  (trapStackOverflow,             "[trap] stack overflow")
     void                m3_FreeRuntime              (IM3Runtime             i_runtime);
 
     // Wasm currently only supports one memory region. i_memoryIndex should be zero.
-    uint8_t *           m3_GetMemory                (IM3Runtime             i_runtime,
-                                                     uint32_t *             o_memorySizeInBytes,
-                                                     uint32_t               i_memoryIndex);
+    void                m3_GetMemory                (IM3Runtime             i_runtime,
+                                                     uint32_t               i_memoryIndex,
+                                                     void*                  dest);
 
     // This is used internally by Raw Function helpers
     uint32_t            m3_GetMemorySize            (IM3Runtime             i_runtime);
@@ -327,6 +327,12 @@ d_m3ErrorConst  (trapStackOverflow,             "[trap] stack overflow")
 
     // The runtime owns the backtrace, do not free the backtrace you obtain. Returns NULL if there's no backtrace.
     IM3BacktraceInfo    m3_GetBacktrace             (IM3Runtime i_runtime);
+
+    typedef struct TaggedUserData
+    {
+        unsigned char tag;
+    }
+    TaggedUserData;
 
 //-------------------------------------------------------------------------------------------------------------------------------
 //  raw function definition helpers

@@ -44,6 +44,7 @@ d_m3BeginExternC
 # define slot(TYPE)                 * (TYPE *) (_sp + immediate (i32))
 # define slot_ptr(TYPE)             (TYPE *) (_sp + immediate (i32))
 
+# define TAG_USE_SPARSE_MEMORY (unsigned char)0x42
 
 # if d_m3EnableOpProfiling
                                     d_m3RetSig  profileOp   (d_m3OpSig, cstr_t i_operationName);
@@ -553,7 +554,7 @@ d_m3Op  (Call)
     m3ret_t r = Call (callPC, sp, _mem, d_m3OpDefaultArgs);
 # endif
 
-    _mem = memory->mallocated;
+    _mem = &memory->header;
 
     if (M3_LIKELY(not r))
         nextOp ();
@@ -597,7 +598,7 @@ d_m3Op  (CallIndirect)
                     r = Call (function->compiled, sp, _mem, d_m3OpDefaultArgs);
 # endif
 
-                    _mem = memory->mallocated;
+                    _mem = &memory->header;
 
                     if (M3_LIKELY(not r))
                         nextOpDirect ();
@@ -663,12 +664,19 @@ d_m3Op  (CallRawFunction)
 # endif
 #endif
 
+    void* memArg = NULL;
+    if (ctx.userdata != NULL && ((TaggedUserData*)ctx.userdata)->tag == TAG_USE_SPARSE_MEMORY) {
+        memArg = memory;
+    } else {
+        memArg = m3MemData(_mem);
+    }
+
     // m3_Call uses runtime->stack to set-up initial exported function stack.
     // Reconfigure the stack to enable recursive invocations of m3_Call.
-    // I.e. exported/table function can be called from an impoted function.
+    // I.e. exported/table function can be called from an imported function.
     void* stack_backup = runtime->stack;
     runtime->stack = sp;
-    m3ret_t possible_trap = call (runtime, &ctx, sp, m3MemData(_mem));
+    m3ret_t possible_trap = call (runtime, &ctx, sp, memArg);
     runtime->stack = stack_backup;
 
 #if d_m3EnableStrace
@@ -686,7 +694,7 @@ d_m3Op  (CallRawFunction)
 #endif
 
     if (M3_UNLIKELY(possible_trap)) {
-        _mem = memory->mallocated;
+        _mem = &memory->header;
         pushBacktraceFrame ();
     }
     forwardTrap (possible_trap);
@@ -697,7 +705,7 @@ d_m3Op  (MemSize)
 {
     IM3Memory memory            = m3MemInfo (_mem);
 
-    _r0 = memory->numPages;
+    _r0 = memory->info.numPages;
 
     nextOp ();
 }
@@ -710,17 +718,17 @@ d_m3Op  (MemGrow)
 
     i32 numPagesToGrow = _r0;
     if (numPagesToGrow >= 0) {
-        _r0 = memory->numPages;
+        _r0 = memory->info.numPages;
 
         if (M3_LIKELY(numPagesToGrow))
         {
-            u32 requiredPages = memory->numPages + numPagesToGrow;
+            u32 requiredPages = memory->info.numPages + numPagesToGrow;
 
             M3Result r = ResizeMemory (runtime, requiredPages);
             if (r)
                 _r0 = -1;
 
-            _mem = memory->mallocated;
+            _mem = &memory->header;
         }
     }
     else
@@ -852,7 +860,7 @@ d_m3Op  (Entry)
 #endif
 
         if (M3_UNLIKELY(r)) {
-            _mem = memory->mallocated;
+            _mem = &memory->header;
             fillBacktraceFrame ();
         }
         forwardTrap (r);
@@ -887,7 +895,7 @@ d_m3Op  (Loop)
 #endif
         // linear memory pointer needs refreshed here because the block it's looping over
         // can potentially invoke the grow operation.
-        _mem = memory->mallocated;
+        _mem = &memory->header;
     }
     while (r == _pc);
 
