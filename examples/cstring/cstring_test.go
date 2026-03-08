@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	wasm3 "github.com/matiasinsaurralde/go-wasm3"
+	wasm3 "github.com/tarcisiozf/go-wasm3"
 )
 
 var (
