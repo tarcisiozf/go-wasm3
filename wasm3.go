@@ -41,11 +41,11 @@ int call(IM3Function i_function, uint32_t i_argc, int i_argv[]) {
 }
 
 int get_allocated_memory_length(IM3Runtime i_runtime) {
-	return i_runtime->memory.mallocated->length;
+	return m3_GetMemorySize(i_runtime);
 }
 
-u8* get_allocated_memory(IM3Runtime i_runtime) {
-	return m3MemData(i_runtime->memory.mallocated);
+void get_allocated_memory(IM3Runtime i_runtime, u8* dest) {
+	m3_GetMemory(i_runtime, 0, dest);
 }
 */
 import "C"
@@ -186,8 +186,11 @@ func (r *Runtime) Destroy() {
 // Memory allows access to runtime Memory.
 // Taken from Wasmer extension: https://github.com/wasmerio/go-ext-wasm
 func (r *Runtime) Memory() []byte {
-	mem := C.get_allocated_memory(
+	memSize := C.get_allocated_memory_length(r.Ptr())
+	mem := C.malloc(C.size_t(memSize))
+	C.get_allocated_memory(
 		r.Ptr(),
+		(*C.u8)(mem),
 	)
 	var data = (*uint8)(mem)
 	length := r.GetAllocatedMemoryLength()
