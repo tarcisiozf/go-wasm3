@@ -323,7 +323,7 @@ func (f *Function) CallWithArgs(args ...string) {
 }
 
 // Call implements a better call function
-// TODO: support diferent types
+// TODO: support different types
 func (f *Function) Call(args ...interface{}) (int, error) {
 	length := len(args)
 	if length == 0 {
