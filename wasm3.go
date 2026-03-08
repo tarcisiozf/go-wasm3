@@ -52,6 +52,7 @@ import "C"
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"unsafe"
 )
@@ -121,7 +122,7 @@ func (r *Runtime) Load(wasmBytes []byte) (*Module, error) {
 		module,
 	)
 	if result != nil {
-		return nil, errLoadModule
+		return nil, fmt.Errorf("module loading failed: %s", C.GoString(result))
 	}
 	result = C.m3_LinkSpecTest(r.Ptr().modules)
 	if result != nil {
@@ -142,7 +143,7 @@ func (r *Runtime) LoadModule(module *Module) (*Module, error) {
 		module.Ptr(),
 	)
 	if result != nil {
-		return nil, errLoadModule
+		return nil, fmt.Errorf("module loading failed: %s", C.GoString(result))
 	}
 	result = C.m3_LinkSpecTest(r.Ptr().modules)
 	if result != nil {
