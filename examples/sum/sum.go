@@ -18,6 +18,7 @@ func main() {
 	runtime := wasm3.NewRuntime(&wasm3.Config{
 		Environment: wasm3.NewEnvironment(),
 		StackSize:   64 * 1024,
+		EnableWASI:  true,
 	})
 	log.Println("Runtime ok")
 
@@ -42,8 +43,12 @@ func main() {
 		panic(err)
 	}
 	log.Printf("Found '%s' function (using runtime.FindFunction)", fnName)
-	result, _ := fn(1, 1)
-	log.Print("Result is: ", result)
+	result, err := fn(1, 1)
+	if err != nil {
+		log.Printf("Error calling function: %s", err)
+	} else {
+		log.Print("Result is: ", result)
+	}
 
 	// Different call approach, retrieving functions from the module object:
 	fn2, err := module.GetFunctionByName("sum")
