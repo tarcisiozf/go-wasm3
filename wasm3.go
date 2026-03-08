@@ -6,6 +6,7 @@ package wasm3
 #cgo linux CFLAGS: -Iinclude
 #cgo linux LDFLAGS: -L${SRCDIR}/lib/linux -lm3 -lm
 
+#include "wasm3.h"
 #include "m3_api_libc.h"
 #include "m3_api_wasi.h"
 #include "m3_env.h"
@@ -19,30 +20,23 @@ IM3Function module_get_function(IM3Module i_module, int index) {
 }
 
 int call(IM3Function i_function, uint32_t i_argc, int i_argv[]) {
-	int result = 0;
-	IM3Module module = i_function->module;
-	IM3Runtime runtime = module->runtime;
-	u64* stack = (u64*)(runtime->stack);
-	IM3FuncType ftype = i_function->funcType;
-	for (int i = 0; i < ftype->numArgs; i++) {
-		int v = i_argv[i];
-		u64* s = &stack[ftype->numRets + i];
-		*(u64*)(s) = v;
+	// Build an array of pointers for m3_Call
+	const void* argptrs[i_argc > 0 ? i_argc : 1];
+	for (uint32_t i = 0; i < i_argc; i++) {
+		argptrs[i] = &i_argv[i];
 	}
-	m3StackCheckInit();
-	M3Result call_result = (M3Result)RunCode(i_function->compiled, (m3stack_t)(stack), runtime->memory.mallocated, d_m3OpDefaultArgs);
-	if(call_result != NULL) {
+	M3Result call_result = m3_Call(i_function, i_argc, argptrs);
+	if (call_result != NULL) {
 		set_error(call_result);
 		return -1;
 	}
-	switch (ftype->types[0]) {
-		case c_m3Type_i32:
-			result = *(u32*)(stack);
-			break;
-		case c_m3Type_i64:
-		default:
-			result =  *(u32*)(stack);
-	};
+	int result = 0;
+	const void* retptrs[] = { &result };
+	M3Result ret_result = m3_GetResults(i_function, 1, retptrs);
+	if (ret_result != NULL) {
+		set_error(ret_result);
+		return -1;
+	}
 	return result;
 }
 
