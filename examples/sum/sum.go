@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 
@@ -8,7 +9,7 @@ import (
 )
 
 const (
-	wasmFilename = "sum.wasm"
+	wasmFilename = "examples/sum/sum.wasm"
 	fnName       = "sum"
 )
 
@@ -47,7 +48,7 @@ func main() {
 	if err != nil {
 		log.Printf("Error calling function: %s", err)
 	} else {
-		log.Print("Result is: ", result)
+		assert(result == 2, fmt.Sprintf("Expected sum(1, 1) to equal 2, got %v", result))
 	}
 
 	// Different call approach, retrieving functions from the module object:
@@ -57,5 +58,11 @@ func main() {
 	}
 	log.Printf("Found '%s' function (using module.GetFunctionByName)", fnName)
 	result, _ = fn2.Call(2, 2)
-	log.Print("Result is: ", result)
+	assert(result == 4, fmt.Sprintf("Expected sum(2, 2) to equal 4, got %v", result))
+}
+
+func assert(cond bool, msg string) {
+	if !cond {
+		panic(msg)
+	}
 }
